@@ -27,9 +27,10 @@ COPY backend/ .
 RUN mkdir -p static/frontend
 COPY --from=frontend-builder /app/dist/ static/frontend/
 
-# Collect static files for WhiteNoise
-RUN python manage.py collectstatic --noinput 2>/dev/null || true
+# Copy and make entrypoint executable
+COPY backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
 
-CMD gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+CMD ["/entrypoint.sh"]
