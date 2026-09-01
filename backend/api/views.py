@@ -414,10 +414,59 @@ def discrepancy_list(request):
 # LLM Explanation
 # ---------------------------------------------------------------------------
 
+from pydantic import ValidationError
+from .schemas import LLMExplanationResponse
+
+
+def build_llm_prompt(results):
+    """Build a detailed prompt with schema instructions for structured LLM output."""
+    lines = []
+    for r in results:
+        order_info = f"Order {r.order.order_id} (net=${r.order.net_amount} {r.order.currency}, status={r.order.status})" if r.order else "No order"
+        payment_info = f"Payment {r.payment.transaction_ref} (amount=${r.payment.amount} {r.payment.currency}, type={r.payment.type}, status={r.payment.status})" if r.payment else "No payment"
+        lines.append(
+            f"DISCREPANCY: {r.get_discrepancy_type_display()}\n"
+            f"  Order: {order_info}\n"
+            f"  Payment: {payment_info}\n"
+            f"  Description: {r.description}\n"
+            f"  Amount at risk: ${r.amount_at_risk}"
+        )
+
+    schema = LLMExplanationResponse.model_json_schema()
+    schema.pop('title', None)
+    schema_str = json.dumps(schema, indent=2)
+
+    prompt = (
+        "ROLE: You are a senior financial operations analyst at a mid-sized e-commerce company. "
+        "You specialize in order-to-cash reconciliation and revenue leakage analysis. "
+        "Your audience is a revenue manager who understands business but is not technical.\n\n"
+        "TASK: Analyze the discrepancies below and produce a structured JSON response.\n\n"
+        "INSTRUCTIONS:\n"
+        "1. SUMMARY: Write one concise paragraph (2-4 sentences) summarizing the overall situation — "
+        "what patterns you see and what the total financial impact is.\n"
+        "2. DISCREPANCIES: For EACH discrepancy in the list below, provide:\n"
+        "   - discrepancy_type: Use the same type name shown above (e.g., 'Duplicate Payment', 'Amount Mismatch').\n"
+        "   - order_id: The order ID if one exists, otherwise null.\n"
+        "   - what_happened: A clear, specific explanation of the root cause. NOT vague. "
+        "     Example of GOOD: 'The payment gateway retried the charge after a network timeout, creating a duplicate entry for the same order.' "
+        "     Example of BAD: 'There was a problem with the payment.'\n"
+        "   - recommended_action: Concrete, actionable steps the revenue manager should take. "
+        "     Example of GOOD: 'Refund the duplicate $120 charge via the payment gateway and update the order status to Paid to prevent further automated retries.' "
+        "     Example of BAD: 'Fix the payment issue.'\n"
+        "   - severity: 'low' if amount at risk is under $10, 'medium' for $10-$100, 'high' for over $100.\n\n"
+        "3. OUTPUT FORMAT: Return ONLY valid JSON matching this exact schema. No markdown code fences, no commentary, no extra text before or after the JSON.\n\n"
+        f"JSON Schema:\n{schema_str}\n\n"
+        "---\n"
+        "DISCREPANCIES TO ANALYZE:\n\n"
+        + "\n\n".join(lines)
+    )
+    return prompt
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def explain_discrepancies(request):
-    """Call LLM to explain one or more discrepancies in plain language."""
+    """Call LLM to explain discrepancies with Pydantic-validated structured output."""
     result_ids = request.data.get('result_ids', [])
     if not result_ids:
         return Response({'detail': 'No result_ids provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -427,21 +476,7 @@ def explain_discrepancies(request):
     if not results:
         return Response({'detail': 'No results found'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Build prompt
-    lines = []
-    for r in results:
-        order_info = f"Order {r.order.order_id} (${r.order.net_amount} {r.order.currency}, status={r.order.status})" if r.order else "No order"
-        payment_info = f"Payment {r.payment.transaction_ref} (${r.payment.amount} {r.payment.currency}, type={r.payment.type}, status={r.payment.status})" if r.payment else "No payment"
-        lines.append(f"- {r.get_discrepancy_type_display()}: {order_info} | {payment_info}. Description: {r.description}")
-
-    prompt = (
-        "You are a financial operations analyst. Explain the following order-payment discrepancies "
-        "in plain language that a non-technical revenue manager could understand. "
-        "For each discrepancy, describe what likely happened and what action should be taken. "
-        "Keep it concise (2-3 sentences per discrepancy) and practical. "
-        "Return your answer as plain text paragraphs, one per discrepancy. Do NOT use JSON formatting.\n\n"
-        + "\n".join(lines)
-    )
+    prompt = build_llm_prompt(results)
 
     try:
         client = OpenAI(
@@ -451,20 +486,78 @@ def explain_discrepancies(request):
         chat = client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": "You are a concise financial operations analyst."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a financial operations analyst. You always respond with valid JSON "
+                        "matching the provided schema exactly. Never include markdown fences or extra text."
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ],
             temperature=settings.LLM_TEMPERATURE,
-            max_tokens=800,
+            max_tokens=1200,
+            response_format={"type": "json_object"},
         )
-        content = chat.choices[0].message.content.strip()
+        raw_content = chat.choices[0].message.content.strip()
 
-        # Store explanation on first result for caching
+        parsed_json = json.loads(raw_content)
+        validated = LLMExplanationResponse(**parsed_json)
+
+        formatted_lines = [validated.summary, ""]
+        for disc in validated.discrepancies:
+            formatted_lines.append(f"**{disc.discrepancy_type}** — Severity: {disc.severity.upper()}")
+            if disc.order_id:
+                formatted_lines.append(f"Order: {disc.order_id}")
+            formatted_lines.append(f"\nWhat happened:\n{disc.what_happened}")
+            formatted_lines.append(f"\nRecommended action:\n{disc.recommended_action}")
+            formatted_lines.append("")
+
+        display_text = "\n".join(formatted_lines)
+
         first = results.first()
-        first.llm_explanation = content
+        first.llm_explanation = display_text
         first.save(update_fields=['llm_explanation'])
 
-        return Response({"explanation": content})
+        return Response({
+            "explanation": display_text,
+            "structured": validated.dict(),
+        })
+
+    except (json.JSONDecodeError, ValidationError) as e:
+        try:
+            client = OpenAI(
+                api_key=settings.LLM_API_KEY,
+                base_url=settings.LLM_BASE_URL,
+            )
+            fallback_prompt = (
+                "You are a financial operations analyst. Explain the following discrepancies "
+                "concisely in plain text paragraphs.\n\n" + prompt.split("---")[-1].strip()
+            )
+            fallback_chat = client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a financial operations analyst. Explain discrepancies concisely.",
+                    },
+                    {"role": "user", "content": fallback_prompt},
+                ],
+                temperature=settings.LLM_TEMPERATURE,
+                max_tokens=800,
+            )
+            fallback_text = fallback_chat.choices[0].message.content.strip()
+            return Response({
+                "explanation": fallback_text,
+                "structured": None,
+                "warning": "Structured output validation failed; returned plain text fallback.",
+            })
+        except Exception as fallback_err:
+            return Response(
+                {"detail": "LLM call failed", "error": str(fallback_err)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
     except Exception as e:
         return Response(
             {"detail": "LLM call failed", "error": str(e)},
