@@ -41,5 +41,3 @@ yarn.lock
 # Docker
 .dockerignore
 
-# Render
-render.yaml
