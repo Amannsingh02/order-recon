@@ -84,7 +84,6 @@ def upload_orders(request):
         return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     user = request.user
-    user.orders.all().delete()
 
     try:
         df = pd.read_csv(file)
@@ -92,6 +91,8 @@ def upload_orders(request):
         if not required_cols.issubset(set(df.columns)):
             missing = required_cols - set(df.columns)
             return Response({'detail': f'Missing columns: {missing}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.orders.all().delete()
 
         # Detect CSV-level duplicate order_ids BEFORE inserting
         seen_ids = set()
@@ -141,7 +142,6 @@ def upload_payments(request):
         return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     user = request.user
-    user.payments.all().delete()
 
     try:
         df = pd.read_csv(file)
@@ -149,6 +149,8 @@ def upload_payments(request):
         if not required_cols.issubset(set(df.columns)):
             missing = required_cols - set(df.columns)
             return Response({'detail': f'Missing columns: {missing}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.payments.all().delete()
 
         payments = []
         for _, row in df.iterrows():

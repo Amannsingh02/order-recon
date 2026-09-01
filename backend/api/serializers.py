@@ -42,6 +42,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class ReconciliationResultSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only=True)
     payment = PaymentSerializer(read_only=True)
+    discrepancy_type_display = serializers.CharField(source='get_discrepancy_type_display', read_only=True)
 
     class Meta:
         model = ReconciliationResult
