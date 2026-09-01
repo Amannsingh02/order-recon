@@ -84,7 +84,6 @@ def upload_orders(request):
         return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     user = request.user
-    # Clear existing data for this user
     user.orders.all().delete()
 
     try:
@@ -93,6 +92,15 @@ def upload_orders(request):
         if not required_cols.issubset(set(df.columns)):
             missing = required_cols - set(df.columns)
             return Response({'detail': f'Missing columns: {missing}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Detect CSV-level duplicate order_ids BEFORE inserting
+        seen_ids = set()
+        duplicate_ids = set()
+        for raw_id in df['order_id']:
+            oid = str(raw_id).strip().upper()
+            if oid in seen_ids:
+                duplicate_ids.add(oid)
+            seen_ids.add(oid)
 
         orders = []
         for _, row in df.iterrows():
@@ -111,12 +119,16 @@ def upload_orders(request):
                     net_amount=Decimal(str(row['net_amount'])),
                     status=str(row['status']).strip().lower(),
                 ))
-            except Exception as e:
-                # Skip malformed rows
+            except Exception:
                 continue
 
-        Order.objects.bulk_create(orders, ignore_conflicts=True)
-        return Response({'detail': f'Imported {len(orders)} orders'})
+        Order.objects.bulk_create(orders)
+
+        msg = f'Imported {len(orders)} orders'
+        if duplicate_ids:
+            msg += f'. Warning: duplicate order IDs detected in CSV: {", ".join(duplicate_ids)}'
+
+        return Response({'detail': msg})
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -164,7 +176,7 @@ def upload_payments(request):
             except Exception:
                 continue
 
-        Payment.objects.bulk_create(payments, ignore_conflicts=True)
+        Payment.objects.bulk_create(payments)
         return Response({'detail': f'Imported {len(payments)} payments'})
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -179,6 +191,21 @@ AMOUNT_TOLERANCE = Decimal('0.01')
 
 def normalize_ref(ref):
     return str(ref).strip().upper()
+
+
+def classify_status_mismatch(order, payments):
+    """Check if order status conflicts with payment reality."""
+    issues = []
+    for p in payments:
+        if order.status == 'cancelled' and p.type == 'charge' and p.status == 'settled':
+            issues.append(f'Order is cancelled but a charge of ${p.amount} was settled.')
+        if order.status == 'refunded' and p.type == 'charge' and p.status == 'settled':
+            issues.append(f'Order is refunded but a charge of ${p.amount} remains settled.')
+        if order.status == 'completed' and p.status == 'failed':
+            issues.append(f'Order is completed but payment {p.transaction_ref} failed.')
+        if order.status == 'completed' and p.status == 'pending':
+            issues.append(f'Order is completed but payment {p.transaction_ref} is still pending.')
+    return issues
 
 
 @api_view(['POST'])
@@ -215,17 +242,15 @@ def run_reconciliation(request):
                 user=user,
                 order=o,
                 discrepancy_type='data_quality',
-                description=f'Duplicate order ID: {o.order_id}',
+                description=f'Duplicate order ID in dataset: {o.order_id}',
                 amount_at_risk=o.net_amount,
             ))
 
     # 2. Match unique orders to payments
-    matched_orders = set()
     for o in orders:
         norm = normalize_ref(o.order_id)
         if norm in duplicate_order_ids:
             continue
-        matched_orders.add(norm)
         ps = payment_map.get(norm, [])
 
         if not ps:
@@ -238,25 +263,21 @@ def run_reconciliation(request):
             ))
             continue
 
+        # Check status mismatches for ALL payments (even if multiple)
+        status_issues = classify_status_mismatch(o, ps)
+
         if len(ps) > 1:
             total_paid = sum(p.amount for p in ps)
-            if abs(total_paid - o.net_amount) <= AMOUNT_TOLERANCE:
-                # Multiple payments that sum correctly — still flag as duplicate payments
-                results.append(ReconciliationResult(
-                    user=user,
-                    order=o,
-                    discrepancy_type='duplicate_payment',
-                    description=f'Order {o.order_id} has {len(ps)} payments (total ${total_paid}).',
-                    amount_at_risk=abs(total_paid - o.net_amount),
-                ))
-            else:
-                results.append(ReconciliationResult(
-                    user=user,
-                    order=o,
-                    discrepancy_type='duplicate_payment',
-                    description=f'Order {o.order_id} has {len(ps)} payments totaling ${total_paid}, expected ${o.net_amount}.',
-                    amount_at_risk=abs(total_paid - o.net_amount),
-                ))
+            desc = f'Order {o.order_id} has {len(ps)} payments (total ${total_paid}, expected ${o.net_amount}).'
+            if status_issues:
+                desc += ' ' + ' '.join(status_issues)
+            results.append(ReconciliationResult(
+                user=user,
+                order=o,
+                discrepancy_type='duplicate_payment',
+                description=desc,
+                amount_at_risk=abs(total_paid - o.net_amount),
+            ))
             for p in ps:
                 processed_payments.add(p.id)
             continue
@@ -273,19 +294,16 @@ def run_reconciliation(request):
         if amount_diff > AMOUNT_TOLERANCE:
             discrepancies.append(f'Amount mismatch: order ${o.net_amount}, payment ${p.amount} (diff ${amount_diff})')
 
-        # Status / type mismatch checks
-        if o.status == 'cancelled' and p.type == 'charge' and p.status == 'settled':
-            discrepancies.append(f'Order is cancelled but a charge of ${p.amount} was settled.')
-        if o.status == 'completed' and p.status == 'failed':
-            discrepancies.append(f'Order is completed but payment failed.')
-        if o.status == 'completed' and p.status == 'pending':
-            discrepancies.append(f'Order is completed but payment is still pending.')
+        # Add status mismatches
+        discrepancies.extend(status_issues)
 
         if discrepancies:
-            disc_type = 'currency_mismatch' if o.currency != p.currency else 'amount_mismatch'
-            # Override if status mismatch is more relevant
-            if any('cancelled' in d or 'failed' in d or 'pending' in d for d in discrepancies):
+            # Choose primary discrepancy type
+            disc_type = 'amount_mismatch'
+            if status_issues:
                 disc_type = 'status_mismatch'
+            elif o.currency != p.currency:
+                disc_type = 'currency_mismatch'
 
             results.append(ReconciliationResult(
                 user=user,
@@ -347,7 +365,7 @@ def dashboard_summary(request):
     breakdown = {}
     for code, label in ReconciliationResult.DISCREPANCY_TYPES:
         count = results.filter(discrepancy_type=code).count()
-        if count > 0 or code == 'fully_reconciled':
+        if count > 0:
             breakdown[label] = count
 
     data = {
@@ -420,7 +438,8 @@ def explain_discrepancies(request):
         "You are a financial operations analyst. Explain the following order-payment discrepancies "
         "in plain language that a non-technical revenue manager could understand. "
         "For each discrepancy, describe what likely happened and what action should be taken. "
-        "Keep it concise (2-3 sentences per discrepancy) and practical.\n\n"
+        "Keep it concise (2-3 sentences per discrepancy) and practical. "
+        "Return your answer as plain text paragraphs, one per discrepancy. Do NOT use JSON formatting.\n\n"
         + "\n".join(lines)
     )
 
@@ -432,21 +451,20 @@ def explain_discrepancies(request):
         chat = client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": "You are a concise financial operations analyst. Return structured JSON."},
+                {"role": "system", "content": "You are a concise financial operations analyst."},
                 {"role": "user", "content": prompt},
             ],
             temperature=settings.LLM_TEMPERATURE,
-            response_format={"type": "json_object"},
+            max_tokens=800,
         )
-        content = chat.choices[0].message.content
-        parsed = json.loads(content)
+        content = chat.choices[0].message.content.strip()
 
         # Store explanation on first result for caching
         first = results.first()
-        first.llm_explanation = json.dumps(parsed)
+        first.llm_explanation = content
         first.save(update_fields=['llm_explanation'])
 
-        return Response({"explanation": parsed})
+        return Response({"explanation": content})
     except Exception as e:
         return Response(
             {"detail": "LLM call failed", "error": str(e)},

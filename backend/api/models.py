@@ -15,7 +15,9 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = [['user', 'order_id']]
+        indexes = [
+            models.Index(fields=['user', 'order_id']),
+        ]
 
     def __str__(self):
         return f"{self.order_id} ({self.user.username})"
