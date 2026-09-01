@@ -119,10 +119,11 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
 }
 
-CORS_ALLOWED_ORIGINS = os.environ.get(
+_cors_raw = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173,http://127.0.0.1:5173'
-).split(',')
+)
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
 
