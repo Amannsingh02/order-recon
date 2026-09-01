@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.views.static import serve
 import os
 
 
@@ -20,6 +21,11 @@ def spa_view(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path(
+        'assets/<path:path>',
+        serve,
+        {'document_root': os.path.join(settings.BASE_DIR, 'static', 'frontend', 'assets')},
+    ),
     path('', spa_view, name='spa'),
 ]
 
