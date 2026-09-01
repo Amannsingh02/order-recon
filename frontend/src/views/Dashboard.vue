@@ -9,6 +9,34 @@
         <p class="text-gray-500 mt-1">Upload data, run reconciliation, and review discrepancies.</p>
       </div>
 
+      <!-- Data Freshness Banner -->
+      <div v-if="summary" class="bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="text-sm text-indigo-800">
+            <span class="font-semibold">{{ summary.total_orders }}</span> orders,
+            <span class="font-semibold">{{ summary.total_payments }}</span> payments loaded
+          </span>
+        </div>
+        <span v-if="lastReconciledAt" class="text-xs text-indigo-600 font-medium">
+          Last reconciled: {{ lastReconciledAt }}
+        </span>
+        <span v-else class="text-xs text-indigo-500">
+          Upload both CSVs and click Run Reconciliation
+        </span>
+      </div>
+      <div v-else class="bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 mb-6 flex items-center gap-3">
+        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="text-sm text-gray-600">
+          No data loaded yet. Upload your CSVs to get started.
+          <span class="text-gray-400">— Uploading new files replaces current data.</span>
+        </span>
+      </div>
+
       <!-- Upload Section -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -292,6 +320,7 @@ export default {
       },
       chartInstance: null,
       searchTimeout: null,
+      lastReconciledAt: null,
     }
   },
   mounted() {
@@ -331,6 +360,7 @@ export default {
         this.reconcileStatus = res.data.detail
         await this.fetchSummary()
         await this.fetchDiscrepancies()
+        this.lastReconciledAt = this.formatDate(new Date())
       } catch (err) {
         this.reconcileStatus = err.response?.data?.detail || 'Reconciliation failed'
       } finally {
@@ -342,6 +372,13 @@ export default {
         const res = await api.get('/dashboard/summary/')
         this.summary = res.data
         this.$nextTick(() => this.renderChart())
+        // Fetch latest result timestamp for freshness banner
+        const dres = await api.get('/discrepancies/', { params: { page_size: 1 } })
+        if (dres.data.results && dres.data.results.length > 0) {
+          this.lastReconciledAt = this.formatDate(dres.data.results[0].created_at)
+        } else {
+          this.lastReconciledAt = null
+        }
       } catch (err) {
         console.error(err)
       }
@@ -440,6 +477,14 @@ export default {
       const num = parseFloat(val)
       if (isNaN(num)) return '$0.00'
       return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    },
+    formatDate(iso) {
+      if (!iso) return ''
+      const d = new Date(iso)
+      return d.toLocaleString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
     },
   },
 }

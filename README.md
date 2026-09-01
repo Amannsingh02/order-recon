@@ -2,7 +2,7 @@
 
 A full-stack revenue reconciliation dashboard that ingests orders and payments CSVs, runs a deterministic reconciliation engine, and presents discrepancies with AI-powered explanations.
 
-**Live URL:** [https://order-recon.onrender.com](https://order-recon.onrender.com) *(update after deployment)*  
+**Live URL:** [https://order-recon.onrender.com](https://order-recon.onrender.com)  
 **GitHub:** [https://github.com/Amannsingh02/order-recon](https://github.com/Amannsingh02/order-recon)
 
 ---
@@ -11,10 +11,10 @@ A full-stack revenue reconciliation dashboard that ingests orders and payments C
 
 You can sign up at `/register` or use the pre-seeded demo account:
 
-- **Username:** `demo`
-- **Password:** `demo1234`
+- **Username:** `amansinghtest`
+- **Password:** `Aman@3540`
 
-*(Create the demo user after deployment with `python manage.py shell` and `User.objects.create_user(...)`)*
+*(Demo user was created directly in production via shell.)*
 
 ---
 

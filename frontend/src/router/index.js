@@ -20,9 +20,17 @@ const router = new VueRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
-  if (!to.meta.public && !token) {
+  const isPublic = to.meta && to.meta.public
+
+  // Not logged in → trying to access protected route → redirect to login
+  if (!isPublic && !token) {
     next('/login')
-  } else {
+  }
+  // Logged in → trying to access login/register → redirect to dashboard
+  else if (isPublic && token) {
+    next('/')
+  }
+  else {
     next()
   }
 })
