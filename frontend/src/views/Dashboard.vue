@@ -3,24 +3,18 @@
     <NavBar />
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <p class="text-gray-500 mt-1">Upload data, run reconciliation, and review discrepancies.</p>
+      </div>
+
       <!-- Upload Section -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Data Ingestion</h2>
-            <p class="text-sm text-gray-500">Upload your orders and payments CSV files</p>
-          </div>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="relative">
             <label class="block text-sm font-medium text-gray-700 mb-2">Orders CSV</label>
-            <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-indigo-300 transition-colors">
+            <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-8 hover:border-indigo-300 transition-colors bg-gray-50/50">
               <input
                 type="file"
                 accept=".csv"
@@ -28,13 +22,13 @@
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <div class="text-center">
-                <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p class="text-sm text-gray-500">Click to upload orders.csv</p>
+                <p class="text-sm text-gray-500 font-medium">Drop orders.csv here or click to browse</p>
               </div>
             </div>
-            <p v-if="uploadStatus.orders" class="mt-2 text-sm text-emerald-600 flex items-center gap-1">
+            <p v-if="uploadStatus.orders" class="mt-3 text-sm text-emerald-600 flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               {{ uploadStatus.orders }}
             </p>
@@ -42,7 +36,7 @@
 
           <div class="relative">
             <label class="block text-sm font-medium text-gray-700 mb-2">Payments CSV</label>
-            <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-indigo-300 transition-colors">
+            <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-8 hover:border-indigo-300 transition-colors bg-gray-50/50">
               <input
                 type="file"
                 accept=".csv"
@@ -50,13 +44,13 @@
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <div class="text-center">
-                <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p class="text-sm text-gray-500">Click to upload payments.csv</p>
+                <p class="text-sm text-gray-500 font-medium">Drop payments.csv here or click to browse</p>
               </div>
             </div>
-            <p v-if="uploadStatus.payments" class="mt-2 text-sm text-emerald-600 flex items-center gap-1">
+            <p v-if="uploadStatus.payments" class="mt-3 text-sm text-emerald-600 flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               {{ uploadStatus.payments }}
             </p>
@@ -88,13 +82,13 @@
           label="Total Orders"
           :value="summary.total_orders"
           icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          color="blue"
+          color="indigo"
         />
         <StatCard
           label="Total Payments"
           :value="summary.total_payments"
           icon="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-          color="purple"
+          color="indigo"
         />
         <StatCard
           label="Reconciled Value"
@@ -123,8 +117,8 @@
       <div v-if="summary" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <!-- Discrepancy Chart -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-1">Discrepancy Breakdown</h3>
-          <p class="text-sm text-gray-500 mb-6">Distribution by type</p>
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Breakdown</h3>
+          <p class="text-sm text-gray-500 mb-6">Discrepancy types by count</p>
           <div class="h-64 relative">
             <canvas ref="chartCanvas"></canvas>
           </div>
@@ -182,12 +176,12 @@
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-100">
-                  <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Type</th>
+                  <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider w-28">Type</th>
                   <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Order</th>
                   <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Payment</th>
-                  <th class="text-right py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">At Risk</th>
+                  <th class="text-right py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider w-24">At Risk</th>
                   <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Description</th>
-                  <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Action</th>
+                  <th class="text-left py-3 px-3 font-medium text-gray-500 text-xs uppercase tracking-wider w-28">Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
@@ -217,7 +211,7 @@
                       v-if="d.discrepancy_type !== 'fully_reconciled'"
                       @click="explainOne(d)"
                       :disabled="explainingId === d.id"
-                      class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors"
+                      class="w-20 inline-flex items-center justify-center gap-1 text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors px-2 py-1 rounded-md hover:bg-indigo-50"
                     >
                       <svg v-if="explainingId === d.id" class="animate-spin h-3 w-3" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
@@ -228,7 +222,7 @@
                       </svg>
                       {{ explainingId === d.id ? 'Thinking...' : 'Explain' }}
                     </button>
-                    <span v-else class="text-gray-400 text-xs">-</span>
+                    <span v-else class="text-gray-400 text-xs px-2">-</span>
                   </td>
                 </tr>
               </tbody>
@@ -237,7 +231,7 @@
         </div>
       </div>
 
-      <!-- LLM Explanation Panel -->
+      <!-- LLM Explanation Modal -->
       <div v-if="explanation" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="explanation = null">
         <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
           <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
@@ -375,7 +369,7 @@ export default {
       const labels = Object.keys(this.summary.discrepancy_breakdown)
       const data = Object.values(this.summary.discrepancy_breakdown)
       const colors = [
-        '#10B981', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899', '#3B82F6', '#6B7280', '#14B8A6',
+        '#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280', '#14B8A6',
       ]
       if (this.chartInstance) {
         this.chartInstance.destroy()

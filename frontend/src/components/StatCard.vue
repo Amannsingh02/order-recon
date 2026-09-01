@@ -31,8 +31,7 @@ export default {
   computed: {
     colorBg() {
       const map = {
-        blue: 'bg-blue-50',
-        purple: 'bg-purple-50',
+        indigo: 'bg-indigo-50',
         emerald: 'bg-emerald-50',
         amber: 'bg-amber-50',
         rose: 'bg-rose-50',
@@ -42,8 +41,7 @@ export default {
     },
     colorText() {
       const map = {
-        blue: 'text-blue-600',
-        purple: 'text-purple-600',
+        indigo: 'text-indigo-600',
         emerald: 'text-emerald-600',
         amber: 'text-amber-600',
         rose: 'text-rose-600',

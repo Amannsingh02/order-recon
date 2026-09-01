@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-50">
     <div class="w-full max-w-md mx-4">
       <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 p-8">
         <div class="text-center mb-8">
-          <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
             </svg>
           </div>
@@ -20,7 +20,7 @@
               type="text"
               required
               placeholder="Choose a username"
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all outline-none"
+              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all outline-none"
             />
           </div>
 
@@ -30,7 +30,7 @@
               v-model="form.email"
               type="email"
               placeholder="you@example.com"
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all outline-none"
+              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all outline-none"
             />
           </div>
 
@@ -42,14 +42,14 @@
               required
               minlength="8"
               placeholder="Minimum 8 characters"
-              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all outline-none"
+              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all outline-none"
             />
           </div>
 
           <button
             type="submit"
             :disabled="loading"
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-200"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200"
           >
             <span v-if="loading" class="flex items-center justify-center gap-2">
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -68,7 +68,7 @@
 
         <p class="mt-6 text-center text-sm text-gray-500">
           Already have an account?
-          <router-link to="/login" class="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">Sign in</router-link>
+          <router-link to="/login" class="text-indigo-600 hover:text-indigo-700 font-medium transition-colors">Sign in</router-link>
         </p>
       </div>
     </div>
