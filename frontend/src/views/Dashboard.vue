@@ -104,6 +104,15 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="loadingSummary" class="flex items-center justify-center py-16 text-gray-400">
+        <svg class="animate-spin h-6 w-6 mr-3 text-indigo-500" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <span class="text-sm">Fetching previous reconciliation data...</span>
+      </div>
+
       <!-- Stats Cards -->
       <div v-if="summary" class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
@@ -303,6 +312,7 @@ export default {
       reconciling: false,
       reconcileStatus: '',
       summary: null,
+      loadingSummary: false,
       discrepancies: [],
       loadingDiscrepancies: false,
       filterType: '',
@@ -368,6 +378,7 @@ export default {
       }
     },
     async fetchSummary() {
+      this.loadingSummary = true
       try {
         const res = await api.get('/dashboard/summary/')
         this.summary = res.data
@@ -381,6 +392,8 @@ export default {
         }
       } catch (err) {
         console.error(err)
+      } finally {
+        this.loadingSummary = false
       }
     },
     async fetchDiscrepancies() {
