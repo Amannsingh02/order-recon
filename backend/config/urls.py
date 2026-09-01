@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
@@ -26,7 +26,7 @@ urlpatterns = [
         serve,
         {'document_root': os.path.join(settings.BASE_DIR, 'static', 'frontend', 'assets')},
     ),
-    path('', spa_view, name='spa'),
+    re_path(r'^(?!api/|admin/|assets/).*$', spa_view, name='spa'),
 ]
 
 # In production, WhiteNoise handles static files.
